@@ -53,3 +53,7 @@ EDGE_THRESHOLDS_PROP = {
 }
 
 print("Config loaded.")
+
+# ── ODDS API (fallback for game lines) ──
+ODDS_API_KEY  = os.environ["ODDS_API_KEY"]
+ODDS_API_BASE = "https://api.the-odds-api.com/v4"
