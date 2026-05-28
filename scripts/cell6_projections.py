@@ -460,12 +460,12 @@ for game in todays_games:
     # Build features and project
     X        = build_feature_row(home_off, away_off, home_def, away_def,
                                   home_rest, away_rest, is_playoff, day_of_szn)
-    X_scaled = scaler_final.transform(X)
+    X_scaled = scaler.transform(X)
 
-    proj_home_pts  = model_home_final.predict(X_scaled)[0]
-    proj_away_pts  = model_away_final.predict(X_scaled)[0]
-    proj_total_pts = model_total_final.predict(X_scaled)[0]
-    win_prob_home  = model_win_final.predict_proba(X_scaled)[0][1]
+    proj_home_pts  = model_home.predict(X_scaled)[0]
+    proj_away_pts  = model_away.predict(X_scaled)[0]
+    proj_total_pts = model_total.predict(X_scaled)[0]
+    win_prob_home  = model_win.predict_proba(X_scaled)[0][1]
 
     print(f"  Proj: {away['abbreviation']} {proj_away_pts:.1f}  "
           f"{home['abbreviation']} {proj_home_pts:.1f}  "
