@@ -38,7 +38,6 @@ def american_to_prob(odds):
         return None
 
 def devig(p1, p2):
-    """Remove vig from two raw probabilities."""
     if not p1 or not p2: return None, None
     total = p1 + p2
     return p1/total, p2/total
@@ -52,41 +51,43 @@ def calc_ev(prob, odds, stake=100):
         return None
 
 def soft_spread(margin, scale=8):
-    """Convert projected margin to ATS probability."""
     return 1/(1+math.exp(-margin/scale))
 
 # ── GENERATE SIGNALS ──
 rows = []
 
 for _, r in df.iterrows():
-    proj_home = float(r.get("proj_home_pts") or 0)
-    proj_away = float(r.get("proj_away_pts") or 0)
-    proj_total= float(r.get("proj_total") or 0)
+    proj_home   = float(r.get("proj_home_pts") or 0)
+    proj_away   = float(r.get("proj_away_pts") or 0)
+    proj_total  = float(r.get("proj_total")    or 0)
     proj_margin = proj_home - proj_away
 
-    home_ml = r.get("book_home_ml") or ""
-    away_ml = r.get("book_away_ml") or ""
-    total   = r.get("book_total_line") or ""
-    o_odds  = r.get("book_over_odds") or ""
-    u_odds  = r.get("book_under_odds") or ""
-    spread  = r.get("book_spread_home") or ""
+    home_ml     = r.get("book_home_ml")          or ""
+    away_ml     = r.get("book_away_ml")          or ""
+    total       = r.get("book_total_line")       or ""
+    o_odds      = r.get("book_over_odds")        or ""
+    u_odds      = r.get("book_under_odds")       or ""
+    spread      = r.get("book_spread_home")      or ""
     spread_odds = r.get("book_spread_home_odds") or ""
     proj_win_home = float(r.get("proj_home_win_pct") or 50) / 100
 
     row = {
-        "game_date":  r.get("game_date",""),
-        "tip_off_et": r.get("tip_off_et",""),
-        "game":       r.get("game",""),
-        "game_id":    r.get("game_id",""),
-        "proj_home":  proj_home,
-        "proj_away":  proj_away,
-        "proj_total": proj_total,
-        "book_home_ml": home_ml,
-        "book_away_ml": away_ml,
-        "book_total_line": total,
-        "book_over_odds":  o_odds,
-        "book_under_odds": u_odds,
+        "game_date":        r.get("game_date",""),
+        "tip_off_et":       r.get("tip_off_et",""),
+        "game":             r.get("game",""),
+        "game_id":          r.get("game_id",""),
+        "proj_home":        proj_home,
+        "proj_away":        proj_away,
+        "proj_total":       proj_total,
+        "book_home_ml":     home_ml,
+        "book_away_ml":     away_ml,
+        "book_total_line":  total,
+        "book_over_odds":   o_odds,
+        "book_under_odds":  u_odds,
         "book_spread_home": spread,
+        "ml_signal":        "No edge",
+        "total_signal":     "No edge",
+        "spread_signal":    "No edge",
     }
 
     # ── MONEYLINE ──
@@ -97,83 +98,68 @@ for _, r in df.iterrows():
         if fair_home and fair_away:
             home_edge = round((proj_win_home - fair_home)*100, 1)
             away_edge = round(((1-proj_win_home) - fair_away)*100, 1)
-            home_ev   = calc_ev(proj_win_home, home_ml)
+            home_ev   = calc_ev(proj_win_home,   home_ml)
             away_ev   = calc_ev(1-proj_win_home, away_ml)
-            row["home_win_prob"] = round(proj_win_home*100,1)
-            row["fair_home_prob"]= round(fair_home*100,1)
-            row["home_edge_pct"] = home_edge
-            row["away_edge_pct"] = away_edge
-            row["home_ev_per_100"] = home_ev
-            row["away_ev_per_100"] = away_ev
-
-            home_name = r.get("game","").split(" @ ")[-1]
-            away_name = r.get("game","").split(" @ ")[0]
+            row["home_win_prob"]    = round(proj_win_home*100, 1)
+            row["fair_home_prob"]   = round(fair_home*100, 1)
+            row["home_edge_pct"]    = home_edge
+            row["away_edge_pct"]    = away_edge
+            row["home_ev_per_100"]  = home_ev
+            row["away_ev_per_100"]  = away_ev
+            home_name = str(r.get("game","")).split(" @ ")[-1]
+            away_name = str(r.get("game","")).split(" @ ")[0]
             if home_edge >= 3:
                 row["ml_signal"] = f"BET {home_name} ML {home_ml} (edge {home_edge:+.1f}%)"
             elif away_edge >= 3:
                 row["ml_signal"] = f"BET {away_name} ML {away_ml} (edge {away_edge:+.1f}%)"
-            else:
-                row["ml_signal"] = "No edge"
 
     # ── TOTAL ──
     if total and o_odds and u_odds:
         try:
-            book_line = float(total)
-            diff      = proj_total - book_line
-            over_prob = 1/(1+math.exp(-diff/6))
-            under_prob= 1-over_prob
+            book_line  = float(total)
+            diff       = proj_total - book_line
+            over_prob  = 1/(1+math.exp(-diff/6))
+            under_prob = 1-over_prob
             raw_o = american_to_prob(o_odds)
             raw_u = american_to_prob(u_odds)
             fair_o, fair_u = devig(raw_o, raw_u)
             if fair_o and fair_u:
-                over_edge  = round((over_prob - fair_o)*100,1)
-                under_edge = round((under_prob - fair_u)*100,1)
+                over_edge  = round((over_prob  - fair_o)*100, 1)
+                under_edge = round((under_prob - fair_u)*100, 1)
                 over_ev    = calc_ev(over_prob,  o_odds)
                 under_ev   = calc_ev(under_prob, u_odds)
-                row["total_diff"]       = round(diff,1)
+                row["total_diff"]       = round(diff, 1)
                 row["total_over_edge"]  = over_edge
                 row["total_under_edge"] = under_edge
                 row["total_ev_over"]    = over_ev
                 row["total_ev_under"]   = under_ev
-
                 if diff >= 3 and over_edge >= 3:
                     row["total_signal"] = f"OVER {total} {o_odds} (proj {proj_total:.1f}, diff {diff:+.1f})"
                 elif diff <= -3 and under_edge >= 3:
                     row["total_signal"] = f"UNDER {total} {u_odds} (proj {proj_total:.1f}, diff {diff:+.1f})"
-                else:
-                    row["total_signal"] = "No edge"
         except:
             pass
 
     # ── SPREAD ──
     if spread and spread_odds:
         try:
-            book_spread = float(spread)
-            # model projected margin vs book spread
-            diff = proj_margin - book_spread
+            book_spread   = float(spread)
+            diff          = proj_margin - book_spread
             home_ats_prob = soft_spread(diff)
             away_ats_prob = 1 - home_ats_prob
             home_ats_ev   = calc_ev(home_ats_prob, spread_odds)
-            # away spread is implied as -spread at similar odds
-            away_spread_val = -book_spread
-            away_spread_odds = spread_odds  # approximation
-            away_ats_ev = calc_ev(away_ats_prob, away_spread_odds)
-            spread_edge = round((home_ats_prob - 0.5238)*100, 1)
-            row["spread_diff"]       = round(diff,1)
-            row["home_ats_prob"]     = round(home_ats_prob*100,1)
+            spread_edge   = round((home_ats_prob - 0.5238)*100, 1)
+            row["spread_diff"]       = round(diff, 1)
+            row["home_ats_prob"]     = round(home_ats_prob*100, 1)
             row["spread_edge_pct"]   = spread_edge
             row["spread_ev_per_100"] = home_ats_ev
-
-            game  = r.get("game","")
-            home_n= game.split(" @ ")[-1]
-            away_n= game.split(" @ ")[0]
+            game   = str(r.get("game",""))
+            home_n = game.split(" @ ")[-1]
+            away_n = game.split(" @ ")[0]
             if diff >= 2.5 and spread_edge >= 2.5:
-                row["spread_signal"] = f"BET {home_n} {spread:+.1f} {spread_odds} (diff {diff:+.1f})"
+                row["spread_signal"] = f"BET {home_n} {book_spread:+.1f} {spread_odds} (diff {diff:+.1f})"
             elif diff <= -2.5 and (100-spread_edge) >= 2.5:
-                away_sp = f"{-book_spread:+.1f}"
-                row["spread_signal"] = f"BET {away_n} {away_sp} (diff {diff:+.1f})"
-            else:
-                row["spread_signal"] = "No edge"
+                row["spread_signal"] = f"BET {away_n} {-book_spread:+.1f} (diff {diff:+.1f})"
         except:
             pass
 
@@ -181,18 +167,19 @@ for _, r in df.iterrows():
 
 df_signals = pd.DataFrame(rows)
 
-# Summary
+# ── SUMMARY ──
 def count_signals(df, col):
     if col not in df.columns:
         return 0
     return int((df[col].notna() & (df[col] != "No edge")).sum())
 
-ml_count  = count_signals(df_signals, "ml_signal")
-tot_count = count_signals(df_signals, "total_signal")
-spd_count = count_signals(df_signals, "spread_signal")
+ml_count    = count_signals(df_signals, "ml_signal")
+tot_count   = count_signals(df_signals, "total_signal")
+spd_count   = count_signals(df_signals, "spread_signal")
 total_flags = ml_count + tot_count + spd_count
-print(f"Signals: {total_flags} total ({ml_count} ML, {tot_count} total, {spd_count} spread)")
+print(f"Signals: {total_flags} total ({ml_count} ML, {tot_count} totals, {spd_count} spread)")
 
+# ── SAVE ──
 try:
     ws = spreadsheet.worksheet("Signals"); ws.clear()
 except:
