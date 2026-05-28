@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>EDGE — WNBA Model</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=Barlow:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0a0c10;--bg2:#111418;--bg3:#181c22;
+    --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
+    --text:#e8eaf0;--muted:#7a8090;--dim:#454b58;
+    --accent:#00d4aa;--accent2:#0099ff;--warn:#f5a623;
+    --danger:#ff4d6d;--profit:#00d4aa;--loss:#ff4d6d;--gold:#f5a623;
+    --fh:'Barlow Condensed',sans-serif;--fb:'Barlow',sans-serif;--fm:'JetBrains Mono',monospace;
+    --r:8px;--r2:12px;
+  }
+  [data-theme="light"] {
+    --bg:#f0f2f5;--bg2:#fff;--bg3:#e8ebf0;
+    --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.15);
+    --text:#0d0f14;--muted:#5a6070;--dim:#9aa0b0;
+    --accent:#00a882;--accent2:#0077cc;--warn:#d4870a;
+    --danger:#cc2244;--profit:#00a882;--loss:#cc2244;--gold:#d4870a;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{font-size:15px;scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--text);font-family:var(--fb);-webkit-font-smoothing:antialiased;min-height:100vh}
+  #loader{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:999;transition:opacity .4s}
+  #loader.hidden{opacity:0;pointer-events:none}
+  .loader-logo{font-family:var(--fh);font-size:48px;font-weight:900;color:var(--accent)}
+  .loader-bar{width:180px;height:2px;background:var(--border2);border-radius:2px;overflow:hidden}
+  .loader-fill{height:100%;width:0;background:var(--accent);animation:load 1.8s ease forwards}
+  @keyframes load{to{width:100%}}
+  .loader-sub{font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+  header{position:sticky;top:0;z-index:100;background:var(--bg);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:54px}
+  .logo{font-family:var(--fh);font-size:26px;font-weight:900;color:var(--accent);display:flex;align-items:center;gap:8px}
+  .logo-sub{font-family:var(--fh);font-weight:500;font-size:13px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-top:1px}
+  .header-right{display:flex;align-items:center;gap:12px}
+  .last-updated{font-size:11px;color:var(--muted);font-family:var(--fm)}
+  .theme-btn{width:34px;height:34px;border-radius:var(--r);border:1px solid var(--border2);background:var(--bg3);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:all .15s}
+  .page{max-width:1100px;margin:0 auto;padding:20px 16px 80px}
+  .date-strip{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+  .date-label{font-family:var(--fh);font-size:13px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+  .date-val{font-family:var(--fh);font-size:22px;font-weight:800;color:var(--text)}
+  .refresh-btn{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:var(--accent);background:rgba(0,212,170,0.08);border:1px solid rgba(0,212,170,0.2);border-radius:var(--r);padding:6px 12px;cursor:pointer;transition:all .15s;font-family:var(--fb)}
+  .spin{display:inline-block}
+  .spin.loading{animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+  @media(max-width:600px){.stat-row{grid-template-columns:repeat(2,1fr)}}
+  .stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;position:relative;overflow:hidden}
+  .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent-color,var(--accent))}
+  .stat-card.gold::before{--accent-color:var(--gold)}
+  .stat-card.blue::before{--accent-color:var(--accent2)}
+  .stat-label{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+  .stat-val{font-family:var(--fh);font-size:28px;font-weight:800;line-height:1;color:var(--text)}
+  .stat-val.profit{color:var(--profit)}
+  .stat-sub{font-size:11px;color:var(--muted);margin-top:4px}
+  .tab-bar{display:flex;gap:2px;background:var(--bg3);border-radius:var(--r2);padding:3px;margin-bottom:16px}
+  .tab-btn{flex:1;padding:8px 12px;border-radius:var(--r);border:none;background:transparent;font-family:var(--fh);font-size:14px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);cursor:pointer;transition:all .15s}
+  .tab-btn.active{background:var(--bg2);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,0.3)}
+  .tab-panel{display:none}
+  .tab-panel.active{display:block}
+  .section-label{font-family:var(--fh);font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .section-label::after{content:'';flex:1;height:1px;background:var(--border)}
+  .game-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);margin-bottom:10px;overflow:hidden;transition:border-color .15s}
+  .game-card:hover{border-color:var(--border2)}
+  .game-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer}
+  .game-matchup{font-family:var(--fh);font-size:18px;font-weight:800;color:var(--text)}
+  .game-meta{display:flex;align-items:center;gap:10px}
+  .game-time{font-family:var(--fm);font-size:11px;color:var(--muted)}
+  .bet-count{font-family:var(--fh);font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px;background:rgba(0,212,170,0.12);color:var(--accent);letter-spacing:.05em;text-transform:uppercase}
+  .bet-count.none{background:var(--bg3);color:var(--dim)}
+  .chevron{font-size:12px;color:var(--muted);transition:transform .2s}
+  .game-card.open .chevron{transform:rotate(180deg)}
+  .game-body{display:none;padding:14px 16px}
+  .game-card.open .game-body{display:block}
+  .signal-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+  @media(max-width:600px){.signal-grid{grid-template-columns:1fr}}
+  .signal-cell{background:var(--bg3);border-radius:var(--r);padding:10px 12px;border:1px solid var(--border)}
+  .signal-cell.flagged{border-color:rgba(0,212,170,0.3);background:rgba(0,212,170,0.05)}
+  .signal-cell.flagged-gold{border-color:rgba(245,166,35,0.3);background:rgba(245,166,35,0.05)}
+  .sig-market{font-family:var(--fh);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+  .sig-action{font-family:var(--fh);font-size:15px;font-weight:800;color:var(--text);margin-bottom:2px}
+  .sig-action.pass{color:var(--dim);font-weight:500;font-size:13px}
+  .sig-detail{font-family:var(--fm);font-size:10px;color:var(--muted)}
+  .sig-ev{font-family:var(--fh);font-size:12px;font-weight:700;margin-top:4px}
+  .sig-ev.pos{color:var(--profit)}
+  .sig-ev.neg{color:var(--loss)}
+  .prop-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);margin-bottom:8px;overflow:hidden;transition:border-color .15s}
+  .prop-card:hover{border-color:var(--border2)}
+  .prop-card.flagged{border-color:rgba(0,212,170,0.25)}
+  .prop-card.high-ev{border-color:rgba(245,166,35,0.4)}
+  .prop-header{display:flex;align-items:center;justify-content:space-between;padding:11px 14px}
+  .prop-left{display:flex;flex-direction:column;gap:2px}
+  .prop-player{font-family:var(--fh);font-size:16px;font-weight:800;color:var(--text)}
+  .prop-game{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px}
+  .prop-team-badge{font-family:var(--fh);font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px;background:var(--bg3);color:var(--muted)}
+  .prop-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+  .prop-market{font-family:var(--fh);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+  .prop-market.pts{color:#1D9E75}.prop-market.reb{color:var(--accent2)}.prop-market.ast{color:#9b8de0}.prop-market.fg3m,.prop-market\.3pm{color:var(--gold)}
+  .prop-bet{font-family:var(--fh);font-size:15px;font-weight:800;color:var(--text)}
+  .prop-odds{font-family:var(--fm);font-size:11px;color:var(--muted)}
+  .prop-ev-badge{font-family:var(--fh);font-size:12px;font-weight:700;padding:3px 8px;border-radius:4px}
+  .prop-ev-badge.good{background:rgba(0,212,170,0.12);color:var(--accent)}
+  .prop-ev-badge.great{background:rgba(245,166,35,0.15);color:var(--gold)}
+  .prop-detail-bar{display:flex;border-top:1px solid var(--border)}
+  .prop-stat{flex:1;padding:8px 12px;text-align:center;border-right:1px solid var(--border)}
+  .prop-stat:last-child{border-right:none}
+  .prop-stat-label{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px}
+  .prop-stat-val{font-family:var(--fh);font-size:14px;font-weight:700;color:var(--text)}
+  .prop-stat-val.accent{color:var(--accent)}.prop-stat-val.gold{color:var(--gold)}.prop-stat-val.red{color:var(--loss)}
+  .bet-log{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden}
+  .bet-log-header{display:grid;grid-template-columns:70px 1fr 80px 60px 60px 60px 60px;gap:0;padding:8px 14px;border-bottom:1px solid var(--border);font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+  @media(max-width:700px){.bet-log-header{display:none}}
+  .bet-log-row{display:grid;grid-template-columns:70px 1fr 80px 60px 60px 60px 60px;gap:0;padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px;align-items:center}
+  .bet-log-row:last-child{border-bottom:none}
+  .bet-log-row:hover{background:var(--bg3)}
+  @media(max-width:700px){.bet-log-row{grid-template-columns:1fr 1fr;gap:4px}}
+  .bet-date{font-family:var(--fm);font-size:11px;color:var(--muted)}
+  .bet-result.w{color:var(--profit);font-weight:700}.bet-result.l{color:var(--loss);font-weight:700}.bet-result.p{color:var(--muted)}
+  .bet-pnl.pos{color:var(--profit);font-weight:500}.bet-pnl.neg{color:var(--loss);font-weight:500}
+  .field-group{display:flex;flex-direction:column;gap:4px}
+  .field-label{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  input,select{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:8px 12px;color:var(--text);font-family:var(--fb);font-size:14px;outline:none;transition:border-color .15s;width:100%}
+  input:focus,select:focus{border-color:var(--accent)}
+  .add-btn{background:var(--accent);color:var(--bg);border:none;border-radius:var(--r);padding:9px 16px;cursor:pointer;font-family:var(--fh);font-size:14px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;transition:opacity .15s;white-space:nowrap}
+  .add-btn:hover{opacity:.85}
+  .br-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+  @media(max-width:600px){.br-grid{grid-template-columns:1fr 1fr}}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px}
+  @media(max-width:600px){.form-grid{grid-template-columns:1fr 1fr}}
+  .bt-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px}
+  .bt-title{font-family:var(--fh);font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .bt-dot{width:8px;height:8px;border-radius:50%}
+  .bt-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px}
+  .bt-row:last-child{border-bottom:none}
+  .bt-season{color:var(--muted);font-family:var(--fm)}
+  .bt-stats{display:flex;gap:14px}
+  .bt-wr{color:var(--text);font-weight:500}
+  .bt-roi{font-family:var(--fh);font-weight:700;font-size:13px}
+  .bt-roi.pos{color:var(--profit)}
+  .footer{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);padding:8px 20px;display:flex;align-items:center;justify-content:space-between}
+  .footer-nav{display:flex;gap:4px}
+  .nav-btn{padding:6px 14px;border-radius:var(--r);border:none;background:transparent;font-family:var(--fh);font-size:13px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);cursor:pointer;transition:all .15s}
+  .nav-btn.active{background:var(--bg3);color:var(--text)}
+  .footer-disclaimer{font-size:10px;color:var(--dim)}
+  .empty{padding:40px 20px;text-align:center;color:var(--dim);font-size:13px;line-height:1.7}
+  .empty-icon{font-size:32px;margin-bottom:10px;opacity:.4}
+  .no-bets{padding:32px;text-align:center;font-size:13px;color:var(--dim)}
+  .green{color:var(--profit)}.gold{color:var(--gold)}.mono{font-family:var(--fm)}
+  .backtest-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  @media(max-width:600px){.backtest-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div id="loader">
+  <div class="loader-logo">EDGE</div>
+  <div class="loader-bar"><div class="loader-fill"></div></div>
+  <div class="loader-sub">WNBA Model · Loading signals</div>
+</div>
+
+<header>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="logo">EDGE</div>
+    <div class="logo-sub">WNBA</div>
+  </div>
+  <div class="header-right">
+    <span class="last-updated" id="lastUpdated">Updated —</span>
+    <button class="theme-btn" onclick="toggleTheme()" title="Toggle theme">☽</button>
+  </div>
+</header>
+
+<div class="page">
+  <div class="date-strip">
+    <div>
+      <div class="date-label">Today's slate</div>
+      <div class="date-val" id="todayDate">—</div>
+    </div>
+    <button class="refresh-btn" onclick="loadData()">
+      <span class="spin" id="spinIcon">↻</span> Refresh
+    </button>
+  </div>
+
+  <div class="stat-row">
+    <div class="stat-card">
+      <div class="stat-label">Signals today</div>
+      <div class="stat-val" id="statSignals">—</div>
+      <div class="stat-sub" id="statGames">— games</div>
+    </div>
+    <div class="stat-card gold">
+      <div class="stat-label">Best EV today</div>
+      <div class="stat-val gold" id="statBestEV">—</div>
+      <div class="stat-sub" id="statBestBet">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Bankroll</div>
+      <div class="stat-val profit" id="statBankroll">$0</div>
+      <div class="stat-sub" id="statBRChange">—</div>
+    </div>
+    <div class="stat-card blue">
+      <div class="stat-label">Season ROI</div>
+      <div class="stat-val" id="statROI">—</div>
+      <div class="stat-sub" id="statBets">— bets logged</div>
+    </div>
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('games',this)">⚡ Games</button>
+    <button class="tab-btn" onclick="switchTab('props',this)">★ Props</button>
+    <button class="tab-btn" onclick="switchTab('bankroll',this)">$ Bankroll</button>
+    <button class="tab-btn" onclick="switchTab('backtest',this)">↗ Backtest</button>
+  </div>
+
+  <!-- GAMES -->
+  <div id="tab-games" class="tab-panel active">
+    <div class="section-label">Game signals</div>
+    <div id="gamesList"><div class="empty"><div class="empty-icon">📊</div>Loading...</div></div>
+  </div>
+
+  <!-- PROPS -->
+  <div id="tab-props" class="tab-panel">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div class="section-label" style="margin-bottom:0;flex:1">Prop signals</div>
+      <div style="display:flex;gap:4px" id="propFilters">
+        <button class="theme-btn" style="width:auto;padding:0 10px;font-size:11px;font-weight:700;font-family:var(--fh)" onclick="filterProps('all')" id="f-all">All</button>
+        <button class="theme-btn" style="width:auto;padding:0 10px;font-size:11px;font-weight:700;font-family:var(--fh);color:#1D9E75" onclick="filterProps('PTS')" id="f-PTS">PTS</button>
+        <button class="theme-btn" style="width:auto;padding:0 10px;font-size:11px;font-weight:700;font-family:var(--fh);color:var(--accent2)" onclick="filterProps('REB')" id="f-REB">REB</button>
+        <button class="theme-btn" style="width:auto;padding:0 10px;font-size:11px;font-weight:700;font-family:var(--fh);color:#9b8de0" onclick="filterProps('AST')" id="f-AST">AST</button>
+        <button class="theme-btn" style="width:auto;padding:0 10px;font-size:11px;font-weight:700;font-family:var(--fh);color:var(--gold)" onclick="filterProps('3PM')" id="f-3PM">3PM</button>
+      </div>
+    </div>
+    <div id="propsList"><div class="empty"><div class="empty-icon">🎯</div>Loading...</div></div>
+  </div>
+
+  <!-- BANKROLL -->
+  <div id="tab-bankroll" class="tab-panel">
+    <div class="section-label">Bankroll tracker</div>
+    <div class="br-grid">
+      <div class="stat-card"><div class="stat-label">Starting bankroll</div><div class="stat-val" id="brStart">$1,000</div></div>
+      <div class="stat-card"><div class="stat-label">Current bankroll</div><div class="stat-val profit" id="brCurrent">$1,000</div></div>
+      <div class="stat-card"><div class="stat-label">Units P&L</div><div class="stat-val" id="brUnits">+0.0u</div><div class="stat-sub" id="brROI">ROI: 0.0%</div></div>
+    </div>
+
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;margin-bottom:14px">
+      <div class="section-label">Log a bet</div>
+      <div class="form-grid">
+        <div class="field-group"><div class="field-label">Game</div><input type="text" id="brGame" placeholder="LV @ DAL"></div>
+        <div class="field-group"><div class="field-label">Market</div>
+          <select id="brMarket">
+            <option value="ml">Moneyline</option><option value="spread">Spread</option>
+            <option value="total">Total</option><option value="pts">PTS Prop</option>
+            <option value="reb">REB Prop</option><option value="ast">AST Prop</option>
+            <option value="fg3m">3PM Prop</option>
+          </select>
+        </div>
+        <div class="field-group"><div class="field-label">Bet</div><input type="text" id="brBet" placeholder="UNDER 19.5"></div>
+      </div>
+      <div class="form-grid">
+        <div class="field-group"><div class="field-label">Units</div><input type="number" id="brUnitsInput" placeholder="1.0" step="0.5" min="0.5"></div>
+        <div class="field-group"><div class="field-label">Odds</div><input type="number" id="brOdds" placeholder="-110"></div>
+        <div class="field-group"><div class="field-label">Edge %</div><input type="number" id="brEdge" placeholder="15.0" step="0.1"></div>
+      </div>
+      <div class="form-grid">
+        <div class="field-group"><div class="field-label">Result</div>
+          <select id="brResult"><option value="p">Pending</option><option value="w">Win</option><option value="l">Loss</option></select>
+        </div>
+        <div class="field-group"><div class="field-label">CLV %</div><input type="number" id="brCLV" placeholder="+2.5" step="0.1"></div>
+        <div class="field-group" style="justify-content:flex-end"><div class="field-label">&nbsp;</div><button class="add-btn" onclick="logBet()">+ Log Bet</button></div>
+      </div>
+    </div>
+
+    <div class="section-label">Bet history</div>
+    <div class="bet-log">
+      <div class="bet-log-header"><div>Date</div><div>Game / Bet</div><div>Market</div><div>Units</div><div>Odds</div><div>Result</div><div>P&L</div></div>
+      <div id="betLog"><div class="no-bets">No bets logged yet.</div></div>
+    </div>
+    <div style="margin-top:10px;text-align:right;display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="exportBets()" style="background:none;border:1px solid var(--border2);border-radius:var(--r);padding:6px 12px;color:var(--muted);font-size:12px;cursor:pointer">↓ Export CSV</button>
+      <button onclick="clearBets()" style="background:none;border:1px solid var(--border2);border-radius:var(--r);padding:6px 12px;color:var(--loss);font-size:12px;cursor:pointer">Clear all</button>
+    </div>
+  </div>
+
+  <!-- BACKTEST -->
+  <div id="tab-backtest" class="tab-panel">
+    <div class="section-label">Model performance — backtested 2022–2025</div>
+    <div class="backtest-grid">
+      <div class="bt-card">
+        <div class="bt-title"><div class="bt-dot" style="background:#1D9E75"></div>Game lines</div>
+        <div class="bt-row"><span class="bt-season">2022</span><div class="bt-stats"><span class="bt-wr">57.1%</span><span class="bt-roi pos">+8.9%</span><span style="font-size:10px;color:var(--muted)">p=0.13</span></div></div>
+        <div class="bt-row"><span class="bt-season">2023</span><div class="bt-stats"><span class="bt-wr">61.3%</span><span class="bt-roi pos">+17.0%</span><span style="font-size:10px" class="green">✓ sig</span></div></div>
+        <div class="bt-row"><span class="bt-season">2024</span><div class="bt-stats"><span class="bt-wr">74.6%</span><span class="bt-roi pos">+42.4%</span><span style="font-size:10px" class="green">✓ sig</span></div></div>
+        <div class="bt-row"><span class="bt-season">2025</span><div class="bt-stats"><span class="bt-wr">59.8%</span><span class="bt-roi pos">+14.1%</span><span style="font-size:10px" class="green">✓ sig</span></div></div>
+        <div class="bt-row" style="border-top:1px solid var(--border2);margin-top:4px;padding-top:8px">
+          <span style="font-size:11px;font-weight:600;color:var(--text)">Combined</span>
+          <div class="bt-stats"><span class="bt-wr" style="font-weight:700">63.7%</span><span class="bt-roi pos" style="font-weight:700">+18.2%</span><span style="font-size:10px" class="green">✓ p≈0</span></div>
+        </div>
+      </div>
+      <div class="bt-card">
+        <div class="bt-title"><div class="bt-dot" style="background:var(--gold)"></div>3PM props ★ best market</div>
+        <div class="bt-row"><span class="bt-season">2023</span><div class="bt-stats"><span class="bt-wr">63.9%</span><span class="bt-roi pos">+19.4%</span><span style="font-size:10px" class="green">✓</span></div></div>
+        <div class="bt-row"><span class="bt-season">2024</span><div class="bt-stats"><span class="bt-wr">68.5%</span><span class="bt-roi pos">+28.1%</span><span style="font-size:10px" class="green">✓</span></div></div>
+        <div class="bt-row"><span class="bt-season">2025</span><div class="bt-stats"><span class="bt-wr">72.5%</span><span class="bt-roi pos">+35.6%</span><span style="font-size:10px" class="green">✓</span></div></div>
+        <div class="bt-row" style="border-top:1px solid var(--border2);margin-top:4px;padding-top:8px">
+          <span style="font-size:11px;font-weight:600;color:var(--text)">Combined</span>
+          <div class="bt-stats"><span class="bt-wr" style="font-weight:700">68.3%</span><span class="bt-roi pos gold" style="font-weight:700">+27.7%</span><span style="font-size:10px" class="green">✓ p=0</span></div>
+        </div>
+      </div>
+      <div class="bt-card">
+        <div class="bt-title"><div class="bt-dot" style="background:var(--accent2)"></div>Rebounds props</div>
+        <div class="bt-row"><span class="bt-season">2023</span><div class="bt-stats"><span class="bt-wr">63.2%</span><span class="bt-roi pos">+18.2%</span><span style="font-size:10px" class="green">✓</span></div></div>
+        <div class="bt-row"><span class="bt-season">2024</span><div class="bt-stats"><span class="bt-wr">65.2%</span><span class="bt-roi pos">+21.8%</span><span style="font-size:10px" class="green">✓</span></div></div>
+        <div class="bt-row"><span class="bt-season">2025</span><div class="bt-stats"><span class="bt-wr">70.1%</span><span class="bt-roi pos">+31.1%</span><span style="font-size:10px" class="green">✓</span></div></div>
+        <div class="bt-row" style="border-top:1px solid var(--border2);margin-top:4px;padding-top:8px">
+          <span style="font-size:11px;font-weight:600;color:var(--text)">Combined</span>
+          <div class="bt-stats"><span class="bt-wr" style="font-weight:700">66.1%</span><span class="bt-roi pos" style="font-weight:700">+25.7%</span><span style="font-size:10px" class="green">✓</span></div>
+        </div>
+      </div>
+      <div class="bt-card">
+        <div class="bt-title"><div class="bt-dot" style="background:#9b8de0"></div>Assists + Points</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+          <div style="padding-right:10px;border-right:1px solid var(--border)">
+            <div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:4px 0 6px">Assists</div>
+            <div class="bt-row"><span class="bt-season">2023</span><div class="bt-stats"><span class="bt-wr">58.5%</span><span class="bt-roi pos">+9.4%</span></div></div>
+            <div class="bt-row"><span class="bt-season">2024</span><div class="bt-stats"><span class="bt-wr">64.4%</span><span class="bt-roi pos">+20.4%</span></div></div>
+            <div class="bt-row"><span class="bt-season">2025</span><div class="bt-stats"><span class="bt-wr">63.0%</span><span class="bt-roi pos">+17.8%</span></div></div>
+          </div>
+          <div style="padding-left:10px">
+            <div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:4px 0 6px">Points</div>
+            <div class="bt-row"><span class="bt-season">2023</span><div class="bt-stats"><span class="bt-wr">58.1%</span><span class="bt-roi pos">+8.7%</span></div></div>
+            <div class="bt-row"><span class="bt-season">2024</span><div class="bt-stats"><span class="bt-wr">61.8%</span><span class="bt-roi pos">+15.6%</span></div></div>
+            <div class="bt-row"><span class="bt-season">2025</span><div class="bt-stats"><span class="bt-wr">62.8%</span><span class="bt-roi pos">+17.5%</span></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:12px 16px;font-size:12px;color:var(--muted);line-height:1.7">
+      <strong style="color:var(--text)">Note —</strong> Results use rolling average as proxy for book line. Target 8–15% live ROI as a strong result. Track CLV from day one.
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <div class="footer-nav">
+    <button class="nav-btn active" onclick="switchTab('games',null,this)">Games</button>
+    <button class="nav-btn" onclick="switchTab('props',null,this)">Props</button>
+    <button class="nav-btn" onclick="switchTab('bankroll',null,this)">$</button>
+    <button class="nav-btn" onclick="switchTab('backtest',null,this)">Stats</button>
+  </div>
+  <div class="footer-disclaimer">Model output only. Bet responsibly.</div>
+</div>
+
+<script>
+// ── CONFIG ── replace with your Sheet ID
+const SHEET_ID = 'YOUR_SHEET_ID_HERE';
+
+// ── THEME ──
+let theme = localStorage.getItem('edge_theme') || 'dark';
+document.documentElement.dataset.theme = theme;
+document.querySelector('.theme-btn').textContent = theme === 'dark' ? '☽' : '☀';
+function toggleTheme() {
+  theme = theme === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = theme;
+  localStorage.setItem('edge_theme', theme);
+  document.querySelector('.theme-btn').textContent = theme === 'dark' ? '☽' : '☀';
+}
+
+// ── DATE ──
+document.getElementById('todayDate').textContent =
+  new Date().toLocaleDateString('en-US', {weekday:'long',month:'long',day:'numeric'});
+
+// ── TABS ──
+function switchTab(id, tabBtn, footerBtn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  const map = {games:0, props:1, bankroll:2, backtest:3};
+  document.querySelectorAll('.tab-btn')[map[id]]?.classList.add('active');
+  document.querySelectorAll('.nav-btn')[map[id]]?.classList.add('active');
+}
+
+// ── CSV PARSER ──
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) return [];
+  const headers = lines[0].split(',').map(h => h.replace(/^"|"$/g,'').trim());
+  return lines.slice(1).map(line => {
+    const vals = [];
+    let cur = '', inQ = false;
+    for (let c of line) {
+      if (c === '"') { inQ = !inQ; }
+      else if (c === ',' && !inQ) { vals.push(cur); cur = ''; }
+      else { cur += c; }
+    }
+    vals.push(cur);
+    const obj = {};
+    headers.forEach((h,i) => obj[h] = (vals[i] || '').trim());
+    return obj;
+  });
+}
+
+async function fetchSheet(tab) {
+  try {
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tab)}`;
+    const r   = await fetch(url);
+    if (!r.ok) return [];
+    return parseCSV(await r.text());
+  } catch { return []; }
+}
+
+let allProps = [], allSignals = [], allProjections = [];
+let propFilter = 'all';
+
+async function loadData() {
+  if (SHEET_ID === 'YOUR_SHEET_ID_HERE') {
+    document.getElementById('gamesList').innerHTML = `<div class="empty"><div class="empty-icon">⚙</div><strong style="color:var(--text)">Setup needed</strong><br><br>Open app/index.html and replace <code style="background:var(--bg3);padding:2px 6px;border-radius:4px">YOUR_SHEET_ID_HERE</code> with your Google Sheet ID.</div>`;
+    document.getElementById('propsList').innerHTML = document.getElementById('gamesList').innerHTML;
+    document.getElementById('loader').classList.add('hidden');
+    return;
+  }
+
+  const spin = document.getElementById('spinIcon');
+  spin.classList.add('loading');
+
+  try {
+    const [projections, signals, props] = await Promise.all([
+      fetchSheet('Projections'),
+      fetchSheet('Signals'),
+      fetchSheet('Props Signals'),
+    ]);
+
+    allProjections = projections;
+    allSignals     = signals;
+    allProps       = props;
+
+    renderGames(projections, signals);
+    renderProps(props);
+    updateStats(signals, props, projections);
+
+    document.getElementById('lastUpdated').textContent =
+      'Updated ' + new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+  } catch(e) {
+    console.error('Load error:', e);
+  }
+
+  spin.classList.remove('loading');
+}
+
+// ── RENDER GAMES ──
+// Signals sheet columns: game, vendor, proj_total, proj_home_win,
+// book_total, total_diff, total_signal, total_ev,
+// book_home_ml, book_away_ml, ml_edge_pct, ml_signal, ml_ev,
+// book_spread, spread_diff, spread_signal, spread_ev, ACTION
+
+function renderGames(projections, signals) {
+  const container = document.getElementById('gamesList');
+  if (!projections.length && !signals.length) {
+    container.innerHTML = `<div class="empty"><div class="empty-icon">📊</div>No games data loaded.<br>Make sure your Sheet ID is set and the sheet is published to web.</div>`;
+    return;
+  }
+
+  // Build signal map keyed by game string
+  const sigMap = {};
+  signals.forEach(s => {
+    const k = (s.game || '').trim();
+    if (!sigMap[k]) sigMap[k] = s;
+  });
+
+  // Use projections as the game list; fall back to signals if no projections
+  const gameList = projections.length ? projections : signals;
+  let html = '';
+
+  gameList.forEach((row, i) => {
+    const game     = (row.game || '').trim();
+    const tipoff   = row.tip_off_et || row.tip_off || '';
+    const sig      = sigMap[game] || {};
+
+    const mlSig     = sig.ml_signal     || '';
+    const totalSig  = sig.total_signal  || '';
+    const spreadSig = sig.spread_signal || '';
+    const mlEv      = parseFloat(sig.ml_ev     || 0);
+    const totalEv   = parseFloat(sig.total_ev  || 0);
+    const spreadEv  = parseFloat(sig.spread_ev || 0);
+
+    const hasML     = mlSig     && mlSig     !== 'No edge' && mlSig     !== '';
+    const hasTotal  = totalSig  && totalSig  !== 'No edge' && totalSig  !== '';
+    const hasSpread = spreadSig && spreadSig !== 'No edge' && spreadSig !== '';
+    const betCount  = [hasML, hasTotal, hasSpread].filter(Boolean).length;
+
+    const projHome = parseFloat(row.proj_home_pts || 0);
+    const projAway = parseFloat(row.proj_away_pts || 0);
+    const projTotal= parseFloat(row.proj_total    || sig.proj_total || 0);
+    const winHome  = parseFloat(row.proj_home_win_pct || sig.proj_home_win || 0);
+    const winAway  = parseFloat(row.proj_away_win_pct || (100 - winHome) || 0);
+
+    const bookTotal = sig.book_total || sig.book_total_line || row.book_total_line || '—';
+    const homeML    = sig.book_home_ml || row.book_home_ml || '—';
+    const awayML    = sig.book_away_ml || row.book_away_ml || '—';
+    const spread    = sig.book_spread  || row.book_spread_home || '—';
+
+    const parts = game.split(' @ ');
+    const away  = parts[0] || '—';
+    const home  = parts[1] || '—';
+
+    html += `
+    <div class="game-card" id="gc-${i}">
+      <div class="game-header" onclick="toggleGame(${i})">
+        <div>
+          <div class="game-matchup">${away} <span style="color:var(--dim)">@</span> ${home}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">
+            <span style="font-family:var(--fm)">${tipoff}</span>
+            ${row.is_playoff == '1' ? '<span style="color:var(--gold);margin-left:6px;font-weight:600">PLAYOFF</span>' : ''}
+          </div>
+        </div>
+        <div class="game-meta">
+          <span class="bet-count${betCount ? '' : ' none'}">${betCount ? betCount + ' bet' + (betCount > 1 ? 's' : '') : 'pass'}</span>
+          <span class="chevron">▼</span>
+        </div>
+      </div>
+      <div class="game-body">
+        <div style="margin-bottom:12px">
+          <div style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Projections</div>
+          <div style="display:flex;align-items:center;gap:8px;background:var(--bg);border-radius:var(--r);padding:10px 14px;border:1px solid var(--border)">
+            <div style="flex:1;text-align:center">
+              <div style="font-size:10px;color:var(--muted);margin-bottom:2px">${away}</div>
+              <div style="font-family:var(--fh);font-size:26px;font-weight:900">${projAway ? projAway.toFixed(1) : '—'}</div>
+              <div style="font-size:11px;color:var(--muted)">${winAway ? winAway.toFixed(1) + '% win' : ''}</div>
+            </div>
+            <div style="text-align:center;min-width:70px">
+              <div style="font-family:var(--fh);font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.08em">TOTAL</div>
+              <div style="font-family:var(--fh);font-size:18px;font-weight:800;color:var(--accent)">${projTotal ? projTotal.toFixed(1) : '—'}</div>
+              <div style="font-size:10px;color:var(--dim)">book ${bookTotal}</div>
+            </div>
+            <div style="flex:1;text-align:center">
+              <div style="font-size:10px;color:var(--muted);margin-bottom:2px">${home}</div>
+              <div style="font-family:var(--fh);font-size:26px;font-weight:900">${projHome ? projHome.toFixed(1) : '—'}</div>
+              <div style="font-size:11px;color:var(--muted)">${winHome ? winHome.toFixed(1) + '% win' : ''}</div>
+            </div>
+          </div>
+        </div>
+        <div style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Signals</div>
+        <div class="signal-grid">
+          ${sigCell('Moneyline', hasML, mlSig, mlEv, `${awayML} / ${homeML}`)}
+          ${sigCell('Total', hasTotal, totalSig, totalEv, `proj ${projTotal.toFixed(1)} · book ${bookTotal}`)}
+          ${sigCell('Spread', hasSpread, spreadSig, spreadEv, `book ${spread}`)}
+        </div>
+        ${row.home_rest_days || row.away_rest_days ? `
+        <div style="display:flex;gap:12px;margin-top:8px">
+          <div style="font-size:11px;color:var(--muted)">Rest: <span style="color:var(--text)">${home} ${row.home_rest_days || '—'}d</span></div>
+          <div style="font-size:11px;color:var(--muted)">Rest: <span style="color:var(--text)">${away} ${row.away_rest_days || '—'}d</span></div>
+        </div>` : ''}
+      </div>
+    </div>`;
+  });
+
+  container.innerHTML = html || `<div class="empty"><div class="empty-icon">📊</div>No games today.</div>`;
+}
+
+function sigCell(market, hasEdge, signal, ev, detail) {
+  const isPass  = !hasEdge;
+  const isGreat = !isPass && ev > 5;
+  const cls     = isPass ? '' : isGreat ? ' flagged-gold' : ' flagged';
+  return `
+  <div class="signal-cell${cls}">
+    <div class="sig-market">${market}</div>
+    <div class="sig-action${isPass ? ' pass' : ''}">${isPass ? 'PASS' : signal}</div>
+    <div class="sig-detail">${detail}</div>
+    ${!isPass ? `<div class="sig-ev ${ev >= 0 ? 'pos' : 'neg'}">EV ${ev >= 0 ? '+' : ''}${ev.toFixed(2)}/100</div>` : ''}
+  </div>`;
+}
+
+function toggleGame(i) {
+  document.getElementById('gc-' + i).classList.toggle('open');
+}
+
+// ── RENDER PROPS ──
+function renderProps(props) {
+  allProps = props;
+  applyPropFilter();
+}
+
+function filterProps(f) {
+  propFilter = f;
+  document.querySelectorAll('[id^="f-"]').forEach(b => b.style.background = 'var(--bg3)');
+  const btn = document.getElementById('f-' + f);
+  if (btn) btn.style.background = 'var(--bg2)';
+  applyPropFilter();
+}
+
+function applyPropFilter() {
+  const container = document.getElementById('propsList');
+  let filtered = propFilter === 'all'
+    ? allProps
+    : allProps.filter(p => (p.prop || '').toUpperCase() === propFilter.toUpperCase());
+
+  if (!filtered.length) {
+    container.innerHTML = `<div class="empty"><div class="empty-icon">🎯</div>${allProps.length ? 'No ' + propFilter + ' signals today.' : 'No prop signals loaded.'}</div>`;
+    return;
+  }
+
+  filtered = [...filtered].sort((a,b) => (parseFloat(b.ev)||0) - (parseFloat(a.ev)||0));
+
+  const propColorMap = {pts:'pts', reb:'reb', ast:'ast', fg3m:'fg3m', '3pm':'fg3m'};
+
+  let html = '';
+  filtered.forEach(p => {
+    const ev      = parseFloat(p.ev)      || 0;
+    const diff    = parseFloat(p.diff)    || 0;
+    const edge    = parseFloat(p.edge_pct)|| 0;
+    const propKey = (p.prop || '').toLowerCase().replace('3pm','fg3m');
+    const clr     = propColorMap[propKey] || 'pts';
+    const label   = p.prop || '';
+    const isGreat = ev >= 8;
+
+    html += `
+    <div class="prop-card flagged${isGreat ? ' high-ev' : ''}">
+      <div class="prop-header">
+        <div class="prop-left">
+          <div class="prop-player">${p.player || '—'}</div>
+          <div class="prop-game">
+            <span class="prop-team-badge">${p.team || ''}</span>
+            ${p.game || ''}
+            <span style="font-family:var(--fm);font-size:10px">${p.tip_off || p.tip_off_et || ''}</span>
+          </div>
+        </div>
+        <div class="prop-right">
+          <div class="prop-market ${clr}">${label}</div>
+          <div class="prop-bet">${p.side || ''} ${p.line || ''}</div>
+          <div class="prop-odds">${p.odds >= 0 ? '+' : ''}${p.odds || ''}  ·  ${p.vendor || ''}</div>
+          <span class="prop-ev-badge ${isGreat ? 'great' : 'good'}">EV ${ev >= 0 ? '+' : ''}${ev.toFixed(2)}</span>
+        </div>
+      </div>
+      <div class="prop-detail-bar">
+        <div class="prop-stat"><div class="prop-stat-label">Projection</div><div class="prop-stat-val">${p.proj || '—'}</div></div>
+        <div class="prop-stat"><div class="prop-stat-label">vs line</div><div class="prop-stat-val ${diff > 0 ? 'accent' : 'red'}">${diff > 0 ? '+' : ''}${diff.toFixed(1)}</div></div>
+        <div class="prop-stat"><div class="prop-stat-label">Model %</div><div class="prop-stat-val">${p.model_prob || '—'}%</div></div>
+        <div class="prop-stat"><div class="prop-stat-label">Book %</div><div class="prop-stat-val">${p.book_prob || '—'}%</div></div>
+        <div class="prop-stat"><div class="prop-stat-label">Edge</div><div class="prop-stat-val gold">${edge > 0 ? '+' : ''}${edge.toFixed(1)}%</div></div>
+      </div>
+    </div>`;
+  });
+
+  container.innerHTML = html;
+}
+
+// ── STATS ──
+function updateStats(signals, props, projections) {
+  const gameSigCount = signals.filter(s =>
+    (s.ml_signal && s.ml_signal !== 'No edge' && s.ml_signal !== '') ||
+    (s.total_signal && s.total_signal !== 'No edge' && s.total_signal !== '') ||
+    (s.spread_signal && s.spread_signal !== 'No edge' && s.spread_signal !== '')
+  ).length;
+
+  document.getElementById('statSignals').textContent = gameSigCount + props.length;
+  document.getElementById('statGames').textContent   = `${projections.length || signals.length} games`;
+
+  const evs = props.map(p => parseFloat(p.ev)||0).filter(e => e > 0);
+  if (evs.length) {
+    const best     = Math.max(...evs);
+    const bestProp = props.find(p => parseFloat(p.ev) === best);
+    document.getElementById('statBestEV').textContent  = `+${best.toFixed(2)}`;
+    document.getElementById('statBestBet').textContent = bestProp
+      ? `${bestProp.player} ${bestProp.prop} ${bestProp.side}` : '—';
+  }
+
+  updateBankrollDisplay();
+}
+
+// ── BANKROLL ──
+let bets       = JSON.parse(localStorage.getItem('edge_bets') || '[]');
+let startingBR = parseFloat(localStorage.getItem('edge_starting_br') || '1000');
+
+function logBet() {
+  const game   = document.getElementById('brGame').value.trim();
+  const market = document.getElementById('brMarket').value;
+  const bet    = document.getElementById('brBet').value.trim();
+  const units  = parseFloat(document.getElementById('brUnitsInput').value) || 1;
+  const odds   = parseInt(document.getElementById('brOdds').value)  || -110;
+  const result = document.getElementById('brResult').value;
+  const edge   = parseFloat(document.getElementById('brEdge').value) || 0;
+  const clv    = parseFloat(document.getElementById('brCLV').value)  || 0;
+
+  if (!game || !bet) { alert('Enter game and bet.'); return; }
+
+  let pnl = 0;
+  if (result === 'w') pnl = odds < 0 ? units*(100/-odds) : units*(odds/100);
+  else if (result === 'l') pnl = -units;
+
+  bets.unshift({
+    date:   new Date().toLocaleDateString('en-US',{month:'numeric',day:'numeric'}),
+    game, market, bet, units, odds, result, edge, clv,
+    pnl: Math.round(pnl*100)/100,
+  });
+
+  localStorage.setItem('edge_bets', JSON.stringify(bets));
+  renderBetLog();
+  updateBankrollDisplay();
+  ['brGame','brBet','brUnitsInput','brOdds','brEdge','brCLV'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+}
+
+function renderBetLog() {
+  const log = document.getElementById('betLog');
+  if (!bets.length) { log.innerHTML = '<div class="no-bets">No bets logged yet.</div>'; return; }
+  log.innerHTML = bets.map(b => `
+  <div class="bet-log-row">
+    <div class="bet-date">${b.date}</div>
+    <div style="font-size:13px;font-weight:500">${b.game}<br><span style="font-size:11px;color:var(--muted)">${b.bet}</span></div>
+    <div style="font-family:var(--fh);font-size:11px;font-weight:700;text-transform:uppercase;color:var(--accent)">${b.market}</div>
+    <div style="font-family:var(--fm);font-size:12px">${b.units}u</div>
+    <div style="font-family:var(--fm);font-size:12px">${b.odds >= 0 ? '+' : ''}${b.odds}</div>
+    <div class="bet-result ${b.result}">${{w:'WIN',l:'LOSS',p:'PEND'}[b.result]}</div>
+    <div class="bet-pnl ${b.pnl >= 0 ? 'pos' : 'neg'}" style="font-family:var(--fm);font-size:12px">${b.pnl >= 0 ? '+' : ''}${b.pnl.toFixed(2)}u</div>
+  </div>`).join('');
+}
+
+function updateBankrollDisplay() {
+  const settled  = bets.filter(b => b.result !== 'p');
+  const totalPnL = settled.reduce((s,b) => s + b.pnl, 0);
+  const totalWag = settled.reduce((s,b) => s + b.units*1.1, 0);
+  const roi      = totalWag > 0 ? (totalPnL/totalWag*100).toFixed(1) : '0.0';
+  const current  = startingBR + totalPnL*(startingBR/100);
+
+  document.getElementById('statBankroll').textContent  = '$' + current.toLocaleString('en-US',{maximumFractionDigits:0});
+  document.getElementById('statBRChange').textContent  = `${totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(1)}u · ${settled.length} bets`;
+  document.getElementById('statROI').textContent       = `${parseFloat(roi) >= 0 ? '+' : ''}${roi}%`;
+  document.getElementById('statBets').textContent      = `${settled.length} bets logged`;
+  document.getElementById('brStart').textContent       = '$' + startingBR.toLocaleString();
+  document.getElementById('brCurrent').textContent     = '$' + current.toLocaleString('en-US',{maximumFractionDigits:0});
+  document.getElementById('brUnits').textContent       = `${totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)}u`;
+  document.getElementById('brROI').textContent         = `ROI: ${roi}%`;
+}
+
+function exportBets() {
+  const rows = bets.map(b => `${b.date},${b.game},${b.market},${b.bet},${b.units},${b.odds},${b.result},${b.edge},${b.clv},${b.pnl}`);
+  const blob = new Blob(['date,game,market,bet,units,odds,result,edge,clv,pnl\n' + rows.join('\n')], {type:'text/csv'});
+  Object.assign(document.createElement('a'), {href:URL.createObjectURL(blob), download:'edge_bets.csv'}).click();
+}
+
+function clearBets() {
+  if (!confirm('Clear all bet history?')) return;
+  bets = [];
+  localStorage.removeItem('edge_bets');
+  renderBetLog();
+  updateBankrollDisplay();
+}
+
+// ── INIT ──
+setTimeout(() => {
+  document.getElementById('loader').classList.add('hidden');
+  renderBetLog();
+  updateBankrollDisplay();
+  loadData();
+}, 1800);
+</script>
+</body>
+</html>
