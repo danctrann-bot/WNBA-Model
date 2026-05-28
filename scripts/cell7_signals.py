@@ -182,9 +182,9 @@ for _, r in df.iterrows():
 df_signals = pd.DataFrame(rows)
 
 # Summary
-ml_bets  = df_signals[df_signals.get("ml_signal","") != "No edge"]["ml_signal"].dropna()
-tot_bets = df_signals[df_signals.get("total_signal","") != "No edge"]["total_signal"].dropna() if "total_signal" in df_signals else pd.Series()
-spd_bets = df_signals[df_signals.get("spread_signal","") != "No edge"]["spread_signal"].dropna() if "spread_signal" in df_signals else pd.Series()
+ml_bets  = df_signals[df_signals["ml_signal"].notna() & (df_signals["ml_signal"] != "No edge")]["ml_signal"] if "ml_signal" in df_signals.columns else pd.Series()
+tot_bets = df_signals[df_signals["total_signal"].notna() & (df_signals["total_signal"] != "No edge")]["total_signal"] if "total_signal" in df_signals.columns else pd.Series()
+spd_bets = df_signals[df_signals["spread_signal"].notna() & (df_signals["spread_signal"] != "No edge")]["spread_signal"] if "spread_signal" in df_signals.columns else pd.Series()
 total_flags = len(ml_bets) + len(tot_bets) + len(spd_bets)
 print(f"Signals: {total_flags} total ({len(ml_bets)} ML, {len(tot_bets)} total, {len(spd_bets)} spread)")
 
