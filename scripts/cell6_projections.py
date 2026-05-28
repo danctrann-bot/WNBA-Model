@@ -1,4 +1,8 @@
 import requests
+from config import (API_KEY, BASE_URL, HEADERS, get_sheet,
+                    ODDS_API_KEY, ODDS_API_BASE,
+                    CURRENT_SEASON, SEASON_START_DATE,
+                    LG_AVG_DPP, LG_AVG_PPP, LG_AVG_PACE)
 import pandas as pd
 import numpy as np
 import pytz
@@ -6,10 +10,6 @@ import time
 import math
 from datetime import datetime, date, timedelta
 from gspread_dataframe import set_with_dataframe
-from config import (API_KEY, BASE_URL, HEADERS, get_sheet,
-                    ODDS_API_KEY, ODDS_API_BASE,
-                    CURRENT_SEASON, SEASON_START_DATE,
-                    LG_AVG_DPP, LG_AVG_PPP, LG_AVG_PACE)
 
 # ============================================================
 # CELL 6 — DAILY PROJECTIONS + ODDS
@@ -17,11 +17,6 @@ from config import (API_KEY, BASE_URL, HEADERS, get_sheet,
 # Fallback odds source: The Odds API (when BDL returns empty)
 # ============================================================
 
-# ── KEYS ──
-# These should already be in memory from Cell 1
-# If you get NameError run Cell 1 first
-ODDS_API_KEY = "b6e855143f7a293a7f4a1a677c696f2f"  # replace with your key
-ODDS_API_BASE = "https://api.the-odds-api.com/v4"
 
 ET                = pytz.timezone("America/New_York")
 CURRENT_SEASON    = 2026
